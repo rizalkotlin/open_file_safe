@@ -69,15 +69,12 @@ public class OpenFilePlugin implements MethodCallHandler
     private static final int RESULT_CODE = 0x12;
     private static final String TYPE_STRING_APK = "application/vnd.android.package-archive";
 
-    @Deprecated
-    public static void registerWith(PluginRegistry.Registrar registrar) {
-        OpenFilePlugin plugin = new OpenFilePlugin();
-        plugin.activity = registrar.activity();
-        plugin.context = registrar.context();
-        plugin.channel = new MethodChannel(registrar.messenger(), "open_file_safe");
-        plugin.channel.setMethodCallHandler(plugin);
-        registrar.addRequestPermissionsResultListener(plugin);
-        registrar.addActivityResultListener(plugin);
+    @Override
+    public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+        this.flutterPluginBinding = binding;
+        this.context = binding.getApplicationContext();
+        channel = new MethodChannel(binding.getBinaryMessenger(), "open_file");
+        channel.setMethodCallHandler(this);
     }
 
     private boolean hasPermission(String permission) {
@@ -88,7 +85,7 @@ public class OpenFilePlugin implements MethodCallHandler
     @SuppressLint("NewApi")
     public void onMethodCall(MethodCall call, @NonNull Result result) {
         isResultSubmitted = false;
-        if (call.method.equals("open_file_safe")) {
+        if (call.method.equals("open_file")) {
             this.result = result;
             filePath = call.argument("file_path");
             if (call.hasArgument("type") && call.argument("type") != null) {
@@ -151,9 +148,19 @@ public class OpenFilePlugin implements MethodCallHandler
         }
 
         try {
-            String appDirCanonicalPath = new File(context.getApplicationInfo().dataDir).getCanonicalPath();
+//            String appDirCanonicalPath = new File(context.getApplicationInfo().dataDir).getCanonicalPath();
+//            String fileCanonicalPath = new File(filePath).getCanonicalPath();
+//            return !fileCanonicalPath.startsWith(appDirCanonicalPath);
+            String appDirFilePath = context.getExternalFilesDir(null).getCanonicalPath();
+            String appDirCachePath = context.getExternalCacheDir().getCanonicalPath();
             String fileCanonicalPath = new File(filePath).getCanonicalPath();
-            return !fileCanonicalPath.startsWith(appDirCanonicalPath);
+            if (fileCanonicalPath.startsWith(appDirFilePath)) {
+                return false;
+            } else if (fileCanonicalPath.startsWith(appDirCachePath)) {
+                return false;
+            } else {
+                return true;
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return true;
@@ -218,6 +225,8 @@ public class OpenFilePlugin implements MethodCallHandler
                 return "application/vnd.google-earth.kml+xml";
             case "gpx":
                 return "application/gpx+xml";
+            case "apk":
+                return TYPE_STRING_APK;
             case "asf":
                 return "video/x-ms-asf";
             case "avi":
@@ -421,11 +430,6 @@ public class OpenFilePlugin implements MethodCallHandler
     }
 
     @Override
-    public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
-        this.flutterPluginBinding = binding;
-    }
-
-    @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
         if (channel == null) {
             // Could be on too low of an SDK to have started listening originally.
@@ -441,7 +445,7 @@ public class OpenFilePlugin implements MethodCallHandler
     public void onAttachedToActivity(ActivityPluginBinding binding) {
         channel =
                 new MethodChannel(
-                        flutterPluginBinding.getBinaryMessenger(), "open_file_safe");
+                        flutterPluginBinding.getBinaryMessenger(), "open_file");
         context = flutterPluginBinding.getApplicationContext();
         activity = binding.getActivity();
         channel.setMethodCallHandler(this);

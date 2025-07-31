@@ -3,7 +3,7 @@
 @interface OpenFilePlugin ()<UIDocumentInteractionControllerDelegate>
 @end
 
-static NSString *const CHANNEL_NAME = @"open_file_safe";
+static NSString *const CHANNEL_NAME = @"open_file";
 
 @implementation OpenFilePlugin{
     FlutterResult _result;
@@ -31,7 +31,7 @@ static NSString *const CHANNEL_NAME = @"open_file_safe";
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-    if ([@"open_file_safe" isEqualToString:call.method]) {
+    if ([@"open_file" isEqualToString:call.method]) {
         _result = result;
         NSString *msg = call.arguments[@"file_path"];
         if(msg==nil){
@@ -117,7 +117,7 @@ static NSString *const CHANNEL_NAME = @"open_file_safe";
             @try {
                 BOOL previewSucceeded = [_documentController presentPreviewAnimated:YES];
                 if(!previewSucceeded){
-                    [_documentController presentOpenInMenuFromRect:CGRectMake(500,20,100,100) inView:_viewController.view animated:YES];
+                    [_documentController presentOpenInMenuFromRect:CGRectMake(500,20,100,100) inView:[UIApplication sharedApplication].delegate.window.rootViewController.view animated:YES];
                 }
             }@catch (NSException *exception) {
                 NSDictionary * dict = @{@"message":@"File opened incorrectly。", @"type":@-4};
@@ -154,7 +154,7 @@ static NSString *const CHANNEL_NAME = @"open_file_safe";
 }
 
 - (UIViewController *)documentInteractionControllerViewControllerForPreview:(UIDocumentInteractionController *)controller {
-    return  _viewController;
+    return [UIApplication sharedApplication].delegate.window.rootViewController;
 }
 
 - (BOOL) isBlankString:(NSString *)string {
